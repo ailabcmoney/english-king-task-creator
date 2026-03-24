@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>英文知識王 - 開單工具</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans TC',sans-serif;background:#f7f8fb;color:#1e293b;min-height:100vh}
+.app{max-width:680px;margin:0 auto;padding:24px 16px}
+
+/* Header */
+.header{
+  background:#fff;border:2px solid #e2e8f0;border-radius:16px;
+  padding:16px 24px;box-shadow:0 2px 8px rgba(0,0,0,.05);margin-bottom:16px;
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+}
+.header h1{font-size:1.2rem;font-weight:900;color:#0f172a;letter-spacing:-.5px}
+.header h1 span{font-weight:600;color:#3b82f6}
+.gear-btn{
+  background:none;border:none;font-size:1.1rem;color:#94a3b8;cursor:pointer;
+  padding:4px;transition:color .2s;
+}
+.gear-btn:hover{color:#3b82f6}
+.api-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px}
+.dot-on{background:#22c55e}
+.dot-off{background:#ef4444}
+
+/* Settings */
+.settings{
+  background:#fff;border:2px solid #e2e8f0;border-radius:16px;
+  overflow:hidden;max-height:0;transition:max-height .4s ease;margin-bottom:16px;
+}
+.settings.open{max-height:800px}
+.settings-inner{padding:18px 24px}
+.s-label{font-size:.75rem;font-weight:700;color:#475569;margin-bottom:5px;display:block}
+.s-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.s-input{
+  flex:1;min-width:180px;border:1px solid #e2e8f0;border-radius:8px;
+  padding:7px 10px;font-size:.8rem;color:#1e293b;outline:none;font-family:inherit;
+}
+.s-input:focus{border-color:#3b82f6}
+.s-select{
+  border:1px solid #e2e8f0;border-radius:8px;padding:7px 10px;
+  font-size:.8rem;color:#1e293b;background:#fff;font-family:inherit;cursor:pointer;
+}
+.s-textarea{
+  width:100%;min-height:140px;border:1px solid #e2e8f0;border-radius:8px;
+  padding:8px 10px;font-size:.72rem;color:#1e293b;outline:none;
+  font-family:'SF Mono',Monaco,monospace;line-height:1.5;resize:vertical;
+}
+.s-textarea:focus{border-color:#3b82f6}
+.s-hint{font-size:.62rem;color:#94a3b8;margin:4px 0 12px}
+.s-actions{display:flex;gap:8px;justify-content:flex-end}
+.s-btn{
+  border:1px solid #e2e8f0;border-radius:8px;padding:6px 16px;
+  font-size:.78rem;font-weight:600;cursor:pointer;transition:all .2s;background:#fff;color:#475569;
+}
+.s-btn:hover{background:#f8fafc;border-color:#93c5fd;color:#1d4ed8}
+.s-btn-primary{background:#3b82f6;color:#fff;border-color:#3b82f6}
+.s-btn-primary:hover{background:#2563eb}
+
+/* Form */
+.form-card{
+  background:#fff;border:2px solid #e2e8f0;border-radius:16px;
+  padding:20px 24px;box-shadow:0 2px 8px rgba(0,0,0,.05);margin-bottom:16px;
+}
+.input-row{display:flex;gap:10px;margin-bottom:12px;align-items:stretch}
+.input-sub{
+  width:130px;border:1.5px solid #e2e8f0;border-radius:10px;padding:10px 12px;
+  font-size:.82rem;color:#64748b;font-weight:600;outline:none;font-family:inherit;
+  transition:border-color .2s;flex-shrink:0;background:#fff;cursor:pointer;
+}
+.input-sub:focus{border-color:#3b82f6;color:#1e293b}
+.input-main{
+  flex:1;border:1.5px solid #e2e8f0;border-radius:10px;padding:10px 14px;
+  font-size:.92rem;color:#1e293b;outline:none;font-family:inherit;transition:border-color .2s;
+}
+.input-main:focus{border-color:#3b82f6}
+.input-main::placeholder{color:#cbd5e1}
+.go-btn{
+  background:linear-gradient(135deg,#3b82f6,#8b5cf6);color:#fff;
+  border:none;border-radius:10px;padding:0 24px;font-size:.88rem;font-weight:800;
+  cursor:pointer;transition:all .2s;white-space:nowrap;
+}
+.go-btn:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(59,130,246,.3)}
+.go-btn:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:none}
+.go-btn .spin{display:inline-block;animation:spin .8s linear infinite}
+@keyframes spin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
+
+/* Error */
+.err{background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:8px 12px;font-size:.8rem;color:#dc2626;margin-bottom:12px;display:none}
+.err.show{display:block}
+
+/* Result */
+.result{
+  background:#fff;border:2px solid #e2e8f0;border-radius:16px;
+  padding:20px 24px;box-shadow:0 2px 8px rgba(0,0,0,.05);margin-bottom:16px;
+  display:none;
+}
+.result.show{display:block}
+.r-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.r-title{font-size:.95rem;font-weight:800;color:#0f172a}
+.r-close{background:none;border:none;font-size:1.2rem;color:#94a3b8;cursor:pointer;padding:2px 6px}
+.r-close:hover{color:#ef4444}
+.r-block{margin-bottom:12px}
+.r-label{font-size:.68rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.r-box{
+  background:#f8fafc;border:1px solid #e8ecf0;border-radius:8px;
+  padding:9px 12px;font-size:.84rem;color:#1e293b;line-height:1.55;
+}
+.r-story{font-style:italic;color:#475569}
+.r-input-title{
+  flex:1;border:1px solid #e8ecf0;border-radius:8px;padding:8px 12px;
+  font-size:.95rem;font-weight:700;color:#0f172a;outline:none;font-family:inherit;
+  background:#f8fafc;transition:border-color .2s;
+}
+.r-input-title:focus{border-color:#3b82f6;background:#fff}
+.r-textarea{
+  width:100%;border:1px solid #e8ecf0;border-radius:8px;padding:9px 12px;
+  font-size:.84rem;color:#1e293b;line-height:1.55;outline:none;font-family:inherit;
+  background:#f8fafc;resize:none;overflow:hidden;transition:border-color .2s;
+}
+.r-textarea:focus{border-color:#3b82f6;background:#fff}
+.r-formula{
+  background:#f8fafc;border:1px solid #e8ecf0;border-radius:8px;
+  padding:10px 12px;font-size:.78rem;color:#475569;line-height:1.7;
+}
+.r-formula-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px}
+.r-formula-eq{font-family:'SF Mono',Monaco,monospace;font-size:.72rem;color:#64748b}
+.r-delta-input{
+  width:70px;border:1px solid #bfdbfe;border-radius:6px;padding:3px 8px;
+  font-size:.85rem;font-weight:700;color:#1d4ed8;background:#eff6ff;
+  text-align:center;outline:none;font-family:inherit;
+}
+.r-delta-input:focus{border-color:#3b82f6;background:#fff}
+.r-lever-sel{
+  border:1px solid #e2e8f0;border-radius:6px;padding:3px 8px;
+  font-size:.78rem;color:#475569;background:#fff;font-family:inherit;cursor:pointer;
+}
+.r-impact-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:6px}
+.r-chip{
+  display:inline-flex;align-items:center;gap:4px;border-radius:8px;
+  padding:6px 14px;font-size:.85rem;font-weight:700;
+}
+.r-chip-rev{background:#dcfce7;border:1px solid #bbf7d0;color:#15803d}
+.r-chip-delta{background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8}
+.r-actions{display:flex;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid #e8ecf0}
+.r-btn{
+  background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;
+  padding:6px 14px;font-size:.75rem;font-weight:600;color:#475569;
+  cursor:pointer;transition:all .2s;
+}
+.r-btn:hover{background:#eff6ff;border-color:#93c5fd;color:#1d4ed8}
+.r-btn.copied{background:#dcfce7;border-color:#bbf7d0;color:#15803d}
+
+/* History */
+.hist{
+  background:#fff;border:2px solid #e2e8f0;border-radius:16px;
+  padding:18px 24px;box-shadow:0 2px 8px rgba(0,0,0,.05);
+}
+.hist-title{font-size:.9rem;font-weight:800;color:#0f172a;margin-bottom:10px}
+.hist-empty{font-size:.8rem;color:#94a3b8;font-style:italic}
+.h-item{
+  border:1px solid #e8ecf0;border-radius:8px;padding:10px 12px;margin-bottom:6px;
+  cursor:pointer;transition:all .2s;
+}
+.h-item:hover{background:#f8fafc;border-color:#cbd5e1}
+.h-row{display:flex;align-items:center;gap:6px}
+.h-title{font-size:.82rem;font-weight:700;color:#1e293b;flex:1}
+.h-rev{font-size:.75rem;font-weight:700;color:#059669}
+.h-story{font-size:.72rem;color:#64748b;font-style:italic;margin-top:3px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+
+<script>
+const BASE={active:27000,convert:2,price:600,renew:80};
+const TGT={active:67500,convert:4,price:900,renew:85};
+let BASE_REV=600;
+const LEVERS={
+  active:{name:'WAU',unit:'人'},convert:{name:'CVR',unit:'%'},
+  price:{name:'ARPU',unit:'元/月'},renew:{name:'RET',unit:'%'},
+};
+
+const DEFAULT_PROMPT = [
+  '你是「{{PRODUCT}}」的資深產品經理。',
+  '',
+  '請根據任務想法：「{{TITLE}}」',
+  '',
+  '用 JSON 格式回覆（只回傳 JSON，不要其他文字）：',
+  '{',
+  '  "optimizedTitle": "精簡有力的任務標題（10字內）",',
+  '  "story": "作為[具體用戶角色]，我想要[具體功能]，以便[可衡量的價值]。",',
+  '  "desc": "2-3句描述具體做法和預期效果，含數字預估。",',
+  '  "ac": "驗收指標，用條列式列出 3-5 個可量化的驗收條件，每條以 - 開頭",',
+  '  "lever": "auto",',
+  '  "delta": 數字,',
+  '  "reasoning": "1-2句解釋效益估算依據"',
+  '}',
+  '',
+  '營收模型（年營收 600萬 目標 6000萬）：',
+  '- WAU: 27,000 人 目標 67,500',
+  '- 付費轉換率: 2% 目標 4%',
+  '- ARPU: $600/月 目標 $900',
+  '- 續訂率: 80% 目標 85%',
+  '',
+  'lever 欄位請從 active/convert/price/renew 中選最相關的。',
+  'delta 是對該 lever 的增量（WAU 的單位是人，轉換率/續訂率是百分點，ARPU 是元）。',
+  '單一任務通常貢獻目標差距的 5%-15%。',
+  '',
+  '要求：角色具體、價值可衡量、全部繁體中文。'
+].join('\n');
+
+const DEFAULT_PRODUCTS = [
+  { name:'英文知識王', prompt:DEFAULT_PROMPT },
+];
+const CFG={
+  apiKey: (localStorage.getItem('ek_apiKey')||'').replace(/[^\x20-\x7E]/g,'').trim(),
+  model: localStorage.getItem('ek_model')||'gpt-4o-mini',
+  products: JSON.parse(localStorage.getItem('ek_products')||'null') || DEFAULT_PRODUCTS,
+  selectedProduct: localStorage.getItem('ek_selProduct')||'英文知識王',
+  showSettings: false,
+  editingIdx: -1, // which product prompt is being edited in settings
+};
+function getProduct(name){return CFG.products.find(p=>p.name===name)}
+function curProduct(){return getProduct(CFG.selectedProduct)||CFG.products[0]||{name:'',prompt:DEFAULT_PROMPT}}
+function saveProducts(){localStorage.setItem('ek_products',JSON.stringify(CFG.products))}
+const history = JSON.parse(localStorage.getItem('ek_history')||'[]');
+
+function renewF(r){return 1/(1-r/100)}
+function calcRev(v){return BASE_REV*(v.active/BASE.active)*(v.convert/BASE.convert)*(v.price/BASE.price)*(renewF(v.renew)/renewF(BASE.renew))}
+function calcImpact(lever,delta){
+  const a={...BASE},b={...BASE};
+  a[lever]=BASE[lever]; b[lever]=BASE[lever]+delta;
+  return calcRev(b)-calcRev(a);
+}
+
+function buildPrompt(title){
+  const p=curProduct();
+  return p.prompt
+    .replace(/\{\{PRODUCT\}\}/g, p.name)
+    .replace(/\{\{TITLE\}\}/g, title);
+}
+
+async function callAI(title){
+  const prompt=buildPrompt(title);
+  const res=await fetch('https://api.openai.com/v1/chat/completions',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+CFG.apiKey},
+    body:JSON.stringify({model:CFG.model,max_tokens:800,temperature:0.7,
+      messages:[
+        {role:'system',content:'你是資深產品經理，擅長 User Story 和效益量化。只回傳 JSON。'},
+        {role:'user',content:prompt}
+      ]
+    })
+  });
+  if(!res.ok){const e=await res.json().catch(()=>({}));throw new Error(e.error?.message||'API錯誤 '+res.status)}
+  const data=await res.json();
+  const text=data.choices[0].message.content;
+  const m=text.match(/\{[\s\S]*\}/);
+  if(!m) throw new Error('AI 回覆格式錯誤');
+  return JSON.parse(m[0]);
+}
+
+let lastResult=null, isLoading=false, errorMsg='', lastTitle='';
+
+function render(){
+  const hasKey=!!CFG.apiKey;
+  document.getElementById('app').innerHTML=`
+  <div class="header">
+    <h1><span>開單工具</span></h1>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span class="api-dot ${hasKey?'dot-on':'dot-off'}"></span>
+      <button class="gear-btn" onclick="toggleSettings()" title="設定">&#9881;</button>
+    </div>
+  </div>
+
+  <div class="settings ${CFG.showSettings?'open':''}">
+    <div class="settings-inner">
+      <div class="s-row">
+        <div style="flex:1"><label class="s-label">OpenAI API Key</label>
+        <input class="s-input" id="s-key" type="password" placeholder="sk-proj-..." value="${CFG.apiKey||''}"></div>
+        <div><label class="s-label">Model</label>
+        <select class="s-select" id="s-model">
+          <option value="gpt-4o-mini" ${CFG.model==='gpt-4o-mini'?'selected':''}>4o-mini</option>
+          <option value="gpt-4o" ${CFG.model==='gpt-4o'?'selected':''}>4o</option>
+          <option value="gpt-4.1" ${CFG.model==='gpt-4.1'?'selected':''}>4.1</option>
+          <option value="o3-mini" ${CFG.model==='o3-mini'?'selected':''}>o3-mini</option>
+        </select></div>
+      </div>
+
+      <label class="s-label" style="margin-top:10px">產品 Prompt 管理</label>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px">
+        ${CFG.products.map((p,i)=>`
+        <div style="display:flex;align-items:center;gap:6px;background:#f8fafc;border:1px solid ${CFG.editingIdx===i?'#3b82f6':'#e8ecf0'};border-radius:8px;padding:8px 10px">
+          <input class="s-input" style="flex:1;min-width:100px;font-weight:700;margin:0;padding:4px 8px" value="${escHtml(p.name)}" onchange="updProductName(${i},this.value)">
+          <button class="s-btn" style="padding:4px 10px;font-size:.72rem" onclick="editProductPrompt(${i})">${CFG.editingIdx===i?'收合':'Prompt'}</button>
+          ${CFG.products.length>1?`<button class="s-btn" style="padding:4px 8px;font-size:.72rem;color:#dc2626" onclick="delProduct(${i})">&times;</button>`:''}
+        </div>
+        ${CFG.editingIdx===i?`
+        <div style="padding:0 4px">
+          <textarea class="s-textarea" id="s-prompt-${i}" style="min-height:120px">${escHtml(p.prompt)}</textarea>
+          <div class="s-hint">可用變數：{{PRODUCT}}, {{TITLE}}</div>
+          <div style="display:flex;gap:6px;margin-top:4px">
+            <button class="s-btn" style="font-size:.72rem" onclick="resetProductPrompt(${i})">恢復預設</button>
+            <button class="s-btn s-btn-primary" style="font-size:.72rem" onclick="saveProductPrompt(${i})">存 Prompt</button>
+          </div>
+        </div>`:''}
+        `).join('')}
+        <button class="s-btn" style="align-self:flex-start;font-size:.72rem" onclick="addProduct()">+ 新增產品</button>
+      </div>
+
+      <div class="s-actions">
+        <button class="s-btn" onclick="testAPI()" id="test-btn">測試連線</button>
+        <button class="s-btn s-btn-primary" onclick="saveSettings()">儲存</button>
+      </div>
+      <div id="test-result" style="margin-top:8px;font-size:.78rem;display:none"></div>
+    </div>
+  </div>
+
+  <div class="err ${errorMsg?'show':''}">${errorMsg}</div>
+
+  <div class="form-card">
+    <div class="input-row">
+      <select class="input-sub" id="f-product" onchange="CFG.selectedProduct=this.value;localStorage.setItem('ek_selProduct',this.value)">
+        ${CFG.products.map(p=>`<option value="${escHtml(p.name)}" ${p.name===CFG.selectedProduct?'selected':''}>${escHtml(p.name)}</option>`).join('')}
+      </select>
+      <input class="input-main" id="f-title" placeholder="輸入任務想法..." value="${escHtml(lastTitle)}" oninput="lastTitle=this.value;checkReady()" onkeydown="if(event.key==='Enter'&&!document.getElementById('go').disabled)doSubmit()">
+      <button class="go-btn" id="go" onclick="doSubmit()" disabled>
+        ${isLoading?'<span class="spin">&#9881;</span> AI 優化中...':'AI 優化'}
+      </button>
+    </div>
+  </div>
+
+  <div class="result ${lastResult?'show':''}">
+    ${lastResult?renderResult():''}
+  </div>
+
+  <div class="hist">
+    <div class="hist-title">歷史 (${history.length})</div>
+    ${history.length===0?'<div class="hist-empty">尚無紀錄</div>':
+      history.slice().reverse().map((h,i)=>`
+      <div class="h-item" onclick="showHistory(${history.length-1-i})">
+        <div class="h-row">
+          <span class="h-title">${escHtml(h.optimizedTitle||h.title)}</span>
+          <span class="h-rev">+${h.impact.toFixed(1)}萬</span>
+        </div>
+        <div class="h-story">${escHtml(h.story)}</div>
+      </div>`).join('')}
+  </div>`;
+}
+
+function renderResult(){
+  const r=lastResult, lv=LEVERS[r.lever]||{name:'?',unit:'?'};
+  const leverOpts=Object.entries(LEVERS).map(([k,v])=>`<option value="${k}" ${k===r.lever?'selected':''}>${v.name}</option>`).join('');
+  return `
+    <div class="r-head">
+      <input class="r-input-title" id="r-optimizedTitle" value="${escHtml(r.optimizedTitle)}" oninput="updField('optimizedTitle',this.value)">
+      <button class="r-close" onclick="clearResult()">&times;</button>
+    </div>
+    <div class="r-block">
+      <div class="r-label">User Story</div>
+      <textarea class="r-textarea" id="r-story" oninput="updField('story',this.value);autoGrow(this)">${escHtml(r.story)}</textarea>
+    </div>
+    <div class="r-block">
+      <div class="r-label">做法</div>
+      <textarea class="r-textarea" id="r-desc" oninput="updField('desc',this.value);autoGrow(this)">${escHtml(r.desc)}</textarea>
+    </div>
+    <div class="r-block">
+      <div class="r-label">AC 驗收指標</div>
+      <textarea class="r-textarea" id="r-ac" oninput="updField('ac',this.value);autoGrow(this)">${escHtml(r.ac||'')}</textarea>
+    </div>
+    <div class="r-block">
+      <div class="r-label">效益</div>
+      <textarea class="r-textarea" id="r-benefit" oninput="parseBenefit(this.value);autoGrow(this)" style="font-family:'SF Mono',Monaco,monospace;font-size:.78rem;line-height:1.7">${buildBenefitText(r)}</textarea>
+    </div>
+    <div class="r-block">
+      <div class="r-label">依據</div>
+      <textarea class="r-textarea" id="r-reasoning" oninput="updField('reasoning',this.value);autoGrow(this)" style="font-size:.78rem;color:#64748b">${escHtml(r.reasoning)}</textarea>
+    </div>
+    <div class="r-actions">
+      ${r.saved?'<span style="font-size:.75rem;color:#15803d;font-weight:600">已收錄</span>':
+      '<button class="r-btn" style="background:#22c55e;color:#fff;border-color:#22c55e;font-weight:700" onclick="confirmResult()">確定收錄</button>'}
+      <button class="r-btn" onclick="copyText()">複製</button>
+      <button class="r-btn" onclick="copyJSON()">JSON</button>
+    </div>`;
+}
+function buildBenefitText(r){
+  if(!r)return '';
+  const lv=LEVERS[r.lever]||{name:'?',unit:'?'};
+  const cur={...BASE};cur[r.lever]=BASE[r.lever]+r.delta;
+  const revAfter=calcRev(cur);
+  return [
+    '槓桿: '+lv.name,
+    '基準: '+BASE[r.lever]+' '+lv.unit,
+    '增量: +'+r.delta+' '+lv.unit,
+    '',
+    '公式: 基準年營收 '+BASE_REV+'萬 x ('+lv.name+': '+(BASE[r.lever]+r.delta)+' / '+BASE[r.lever]+') x 其他不變',
+    '     = '+revAfter.toFixed(1)+'萬',
+    '',
+    '年營收影響: +NT$ '+r.impact.toFixed(1)+' 萬/年',
+  ].join('\n');
+}
+function parseBenefit(text){
+  if(!lastResult)return;
+  // parse delta from text
+  const deltaM=text.match(/增量:\s*\+?([\-\d.]+)/);
+  if(deltaM){
+    const v=Number(deltaM[1]);
+    if(!isNaN(v)&&v!==lastResult.delta){
+      lastResult.delta=v;
+      lastResult.impact=calcImpact(lastResult.lever,v);
+    }
+  }
+  // parse lever
+  const leverM=text.match(/槓桿:\s*(\S+)/);
+  if(leverM){
+    const found=Object.entries(LEVERS).find(([k,v])=>v.name===leverM[1]);
+    if(found&&found[0]!==lastResult.lever){
+      lastResult.lever=found[0];
+      lastResult.impact=calcImpact(found[0],lastResult.delta);
+    }
+  }
+  // parse base rev
+  const brM=text.match(/基準年營收\s*([\d.]+)萬/);
+  if(brM){const v=Number(brM[1]);if(!isNaN(v)&&v>0)BASE_REV=v;}
+  // parse base value
+  const baseM=text.match(/基準:\s*([\d.]+)/);
+  if(baseM){const v=Number(baseM[1]);if(!isNaN(v))BASE[lastResult.lever]=v;}
+  // recalc
+  lastResult.impact=calcImpact(lastResult.lever,lastResult.delta);
+}
+function refreshFormula(){
+  if(!lastResult)return;
+  const el=document.getElementById('r-benefit');
+  if(el){
+    const pos=el.selectionStart;
+    el.value=buildBenefitText(lastResult);
+    el.selectionStart=el.selectionEnd=pos;
+  }
+}
+function autoGrow(el){el.style.height='auto';el.style.height=el.scrollHeight+'px'}
+
+function toggleSettings(){CFG.showSettings=!CFG.showSettings;render()}
+function cleanKey(s){return s.replace(/[^\x20-\x7E]/g,'').trim()}
+function saveSettings(){
+  CFG.apiKey=cleanKey(document.getElementById('s-key').value);
+  CFG.model=document.getElementById('s-model').value;
+  localStorage.setItem('ek_apiKey',CFG.apiKey);
+  localStorage.setItem('ek_model',CFG.model);
+  saveProducts();
+  CFG.editingIdx=-1;
+  CFG.showSettings=false;render();
+}
+function addProduct(){
+  const name='新產品 '+(CFG.products.length+1);
+  CFG.products.push({name,prompt:DEFAULT_PROMPT});
+  saveProducts();render();
+}
+function delProduct(i){
+  if(CFG.products.length<=1)return;
+  const removed=CFG.products.splice(i,1)[0];
+  if(CFG.selectedProduct===removed.name) CFG.selectedProduct=CFG.products[0].name;
+  localStorage.setItem('ek_selProduct',CFG.selectedProduct);
+  CFG.editingIdx=-1;saveProducts();render();
+}
+function updProductName(i,val){
+  const old=CFG.products[i].name;
+  CFG.products[i].name=val.trim()||old;
+  if(CFG.selectedProduct===old) CFG.selectedProduct=CFG.products[i].name;
+  localStorage.setItem('ek_selProduct',CFG.selectedProduct);
+  saveProducts();
+}
+function editProductPrompt(i){CFG.editingIdx=CFG.editingIdx===i?-1:i;render()}
+function saveProductPrompt(i){
+  const el=document.getElementById('s-prompt-'+i);
+  if(el) CFG.products[i].prompt=el.value;
+  saveProducts();CFG.editingIdx=-1;render();
+}
+function resetProductPrompt(i){
+  const el=document.getElementById('s-prompt-'+i);
+  if(el) el.value=DEFAULT_PROMPT;
+}
+async function testAPI(){
+  const key=cleanKey(document.getElementById('s-key').value);
+  const model=document.getElementById('s-model').value;
+  const el=document.getElementById('test-result');
+  const btn=document.getElementById('test-btn');
+  if(!key){el.style.display='block';el.style.color='#dc2626';el.textContent='請先輸入 API Key';return}
+  btn.disabled=true;btn.textContent='測試中...';el.style.display='block';el.style.color='#64748b';el.textContent='正在連線 OpenAI...';
+  try{
+    const res=await fetch('https://api.openai.com/v1/chat/completions',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+      body:JSON.stringify({model:model,max_tokens:5,messages:[{role:'user',content:'hi'}]})
+    });
+    if(res.ok){el.style.color='#15803d';el.textContent='連線成功！API Key 有效';}
+    else{const e=await res.json().catch(()=>({}));el.style.color='#dc2626';el.textContent='API 回應 '+res.status+'：'+(e.error?.message||'未知錯誤');}
+  }catch(e){
+    el.style.color='#dc2626';
+    el.textContent='網路錯誤：'+e.message+'（如果是 file:// 開啟，請改用 localhost）';
+  }
+  btn.disabled=false;btn.textContent='測試連線';
+}
+function checkReady(){document.getElementById('go').disabled=document.getElementById('f-title').value.trim().length<2||isLoading}
+
+async function doSubmit(){
+  const title=document.getElementById('f-title').value.trim();
+  lastTitle=title;
+  if(!CFG.apiKey){CFG.showSettings=true;errorMsg='請先設定 API Key';render();return}
+  if(title.length<2)return;
+  isLoading=true;errorMsg='';render();
+  try{
+    const r=await callAI(title);
+    const lever=r.lever||'active';
+    const delta=Number(r.delta)||0;
+    const impact=calcImpact(lever,delta);
+    lastResult={lever,title,optimizedTitle:r.optimizedTitle||title,story:r.story,desc:r.desc,ac:r.ac||'',delta,reasoning:r.reasoning,impact,saved:false};
+  }catch(e){
+    if(e.message==='Failed to fetch') errorMsg='無法連線 OpenAI API，請確認 API Key 是否正確、網路是否正常';
+    else errorMsg='錯誤：'+e.message;
+    lastResult=null;
+  }
+  isLoading=false;render();
+}
+
+function showHistory(i){const h=history[i];if(!h)return;lastResult={...h};render();window.scrollTo({top:0,behavior:'smooth'})}
+function updField(key,val){if(lastResult)lastResult[key]=val.trim()}
+function updDelta(v){
+  if(!lastResult)return;
+  lastResult.delta=v;
+  lastResult.impact=calcImpact(lastResult.lever,v);
+  refreshFormula();
+}
+function updLever(lk){
+  if(!lastResult)return;
+  lastResult.lever=lk;
+  lastResult.impact=calcImpact(lk,lastResult.delta);
+  render();
+}
+function updBase(v){
+  if(!lastResult)return;
+  BASE[lastResult.lever]=Number(v)||0;
+  lastResult.impact=calcImpact(lastResult.lever,lastResult.delta);
+  refreshFormula();
+}
+function updBaseRev(v){
+  BASE_REV=v||600;
+  if(lastResult){lastResult.impact=calcImpact(lastResult.lever,lastResult.delta);refreshFormula();}
+}
+function confirmResult(){
+  if(!lastResult||lastResult.saved)return;
+  lastResult.saved=true;
+  history.push({...lastResult,time:new Date().toLocaleString('zh-TW')});
+  localStorage.setItem('ek_history',JSON.stringify(history));
+  render();
+}
+function clearResult(){lastResult=null;render()}
+function copyText(){
+  if(!lastResult)return;const r=lastResult,lv=LEVERS[r.lever]||{name:'?',unit:'?'};
+  navigator.clipboard.writeText(`${r.optimizedTitle}\n\nUS: ${r.story}\n\n做法: ${r.desc}\n\nAC 驗收指標:\n${r.ac||''}\n\n效益: ${lv.name} +${r.delta}${lv.unit} | +${r.impact.toFixed(1)}萬/年\n依據: ${r.reasoning}`);
+  flashBtn(0,'已複製');
+}
+function copyJSON(){if(!lastResult)return;navigator.clipboard.writeText(JSON.stringify(lastResult,null,2));flashBtn(1,'已複製')}
+function flashBtn(i,t){const b=document.querySelectorAll('.r-btn');if(!b[i])return;const o=b[i].textContent;b[i].classList.add('copied');b[i].textContent=t;setTimeout(()=>{b[i].classList.remove('copied');b[i].textContent=o},1200)}
+function escHtml(s){return s?String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'):''}
+
+render();
+// auto-grow textareas after render
+const _obs=new MutationObserver(()=>{document.querySelectorAll('.r-textarea').forEach(el=>{el.style.height='auto';el.style.height=el.scrollHeight+'px'})});
+_obs.observe(document.getElementById('app'),{childList:true,subtree:true});
+</script>
+</body>
+</html>
