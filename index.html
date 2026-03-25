@@ -180,6 +180,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans TC',sans
 <div class="app" id="app"></div>
 
 <script>
+const SB_URL='https://cyxgvipoxboavwyferij.supabase.co';
+const SB_KEY='sb_publishable_7u-rimkae201iax9KxbN2g_MZRMhfJm';
+const SB_HEADERS={'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json'};
+
 const BASE={active:27000,convert:2,price:600,renew:80};
 const TGT={active:67500,convert:4,price:900,renew:85};
 let BASE_REV=600;
@@ -244,15 +248,34 @@ const DEFAULT_PRODUCTS = [
 const CFG={
   apiKey: (localStorage.getItem('ek_apiKey')||'').replace(/[^\x20-\x7E]/g,'').trim(),
   model: localStorage.getItem('ek_model')||'gpt-4o-mini',
+  author: localStorage.getItem('ek_author')||'',
   products: JSON.parse(localStorage.getItem('ek_products')||'null') || DEFAULT_PRODUCTS,
   selectedProduct: localStorage.getItem('ek_selProduct')||'英文知識王',
   showSettings: false,
-  editingIdx: -1, // which product prompt is being edited in settings
+  editingIdx: -1,
 };
 function getProduct(name){return CFG.products.find(p=>p.name===name)}
 function curProduct(){return getProduct(CFG.selectedProduct)||CFG.products[0]||{name:'',prompt:DEFAULT_PROMPT}}
 function saveProducts(){localStorage.setItem('ek_products',JSON.stringify(CFG.products))}
-const history = JSON.parse(localStorage.getItem('ek_history')||'[]');
+let history = [];
+async function loadHistory(){
+  try{
+    const res=await fetch(SB_URL+'/rest/v1/tickets?select=*&order=created_at.desc&limit=200',{headers:SB_HEADERS});
+    if(res.ok){
+      const rows=await res.json();
+      history=rows.map(r=>({
+        id:r.id,author:r.author,product:r.product,title:r.title,
+        optimizedTitle:r.optimized_title,story:r.story,desc:r.description,
+        ac:r.ac,lever:r.lever,delta:Number(r.delta),impact:Number(r.impact),
+        reasoning:r.reasoning,cpuType:r.cpu_type,cpuFormula:r.cpu_formula,
+        cpuResult:Number(r.cpu_result),cpuParams:r.cpu_params||{},
+        time:new Date(r.created_at).toLocaleString('zh-TW'),saved:true
+      }));
+      render();
+    }
+  }catch(e){console.error('載入歷史失敗',e)}
+}
+loadHistory();
 
 function renewF(r){return 1/(1-r/100)}
 function calcRev(v){return BASE_REV*(v.active/BASE.active)*(v.convert/BASE.convert)*(v.price/BASE.price)*(renewF(v.renew)/renewF(BASE.renew))}
@@ -297,6 +320,7 @@ function render(){
   <div class="header">
     <h1><span>開單工具</span></h1>
     <div style="display:flex;align-items:center;gap:8px">
+      ${CFG.author?'<span style="font-size:.75rem;color:#475569;font-weight:600">'+escHtml(CFG.author)+'</span>':''}
       <span class="api-dot ${hasKey?'dot-on':'dot-off'}"></span>
       <button class="gear-btn" onclick="toggleSettings()" title="設定">&#9881;</button>
     </div>
@@ -304,6 +328,10 @@ function render(){
 
   <div class="settings ${CFG.showSettings?'open':''}">
     <div class="settings-inner">
+      <div class="s-row">
+        <div style="flex:1"><label class="s-label">你的名字</label>
+        <input class="s-input" id="s-author" placeholder="輸入名字（開單時會記錄）" value="${escHtml(CFG.author)}"></div>
+      </div>
       <div class="s-row">
         <div style="flex:1"><label class="s-label">OpenAI API Key</label>
         <input class="s-input" id="s-key" type="password" placeholder="sk-proj-..." value="${CFG.apiKey||''}"></div>
@@ -372,7 +400,7 @@ function render(){
           <span class="h-title">${escHtml(h.optimizedTitle||h.title)}</span>
           <span class="h-rev">${h.cpuResult?'P:'+Number(h.cpuResult).toLocaleString()+'元 | ':''}+${h.impact.toFixed(1)}萬</span>
         </div>
-        <div class="h-story">${escHtml(h.story)}</div>
+        <div class="h-story"><span style="color:#3b82f6;font-style:normal;font-weight:600">${escHtml(h.author||'')}</span> ${escHtml(h.story)}</div>
       </div>`).join('')}
   </div>`;
 }
@@ -486,8 +514,10 @@ function autoGrow(el){el.style.height='auto';el.style.height=el.scrollHeight+'px
 function toggleSettings(){CFG.showSettings=!CFG.showSettings;render()}
 function cleanKey(s){return s.replace(/[^\x20-\x7E]/g,'').trim()}
 function saveSettings(){
+  CFG.author=document.getElementById('s-author').value.trim();
   CFG.apiKey=cleanKey(document.getElementById('s-key').value);
   CFG.model=document.getElementById('s-model').value;
+  localStorage.setItem('ek_author',CFG.author);
   localStorage.setItem('ek_apiKey',CFG.apiKey);
   localStorage.setItem('ek_model',CFG.model);
   saveProducts();
@@ -590,11 +620,23 @@ function updBaseRev(v){
   BASE_REV=v||600;
   if(lastResult){lastResult.impact=calcImpact(lastResult.lever,lastResult.delta);refreshFormula();}
 }
-function confirmResult(){
+async function confirmResult(){
   if(!lastResult||lastResult.saved)return;
-  lastResult.saved=true;
-  history.push({...lastResult,time:new Date().toLocaleString('zh-TW')});
-  localStorage.setItem('ek_history',JSON.stringify(history));
+  if(!CFG.author){CFG.showSettings=true;errorMsg='請先在設定填寫你的名字';render();return}
+  const row={
+    author:CFG.author,product:CFG.selectedProduct,title:lastResult.title,
+    optimized_title:lastResult.optimizedTitle,story:lastResult.story,
+    description:lastResult.desc,ac:lastResult.ac,lever:lastResult.lever,
+    delta:lastResult.delta,impact:lastResult.impact,reasoning:lastResult.reasoning,
+    cpu_type:lastResult.cpuType,cpu_formula:lastResult.cpuFormula,
+    cpu_result:lastResult.cpuResult,cpu_params:lastResult.cpuParams
+  };
+  try{
+    const res=await fetch(SB_URL+'/rest/v1/tickets',{method:'POST',headers:{...SB_HEADERS,'Prefer':'return=representation'},body:JSON.stringify(row)});
+    if(!res.ok){const e=await res.json().catch(()=>({}));throw new Error(e.message||'儲存失敗')}
+    lastResult.saved=true;
+    await loadHistory();
+  }catch(e){errorMsg='儲存失敗：'+e.message}
   render();
 }
 function clearResult(){lastResult=null;render()}
