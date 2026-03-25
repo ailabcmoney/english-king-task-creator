@@ -170,8 +170,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans TC',sans
 .h-title{font-size:.82rem;font-weight:700;color:#1e293b;flex:1}
 .h-rev{font-size:.75rem;font-weight:700;color:#059669}
 .h-story{font-size:.72rem;color:#64748b;font-style:italic;margin-top:3px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.h-del{background:none;border:none;font-size:1rem;color:#cbd5e1;cursor:pointer;padding:2px 6px;line-height:1;transition:color .2s;flex-shrink:0}
-.h-del:hover{color:#ef4444}
+.r-btn-del{color:#dc2626;border-color:#fecaca;margin-left:auto}
+.r-btn-del:hover{background:#fef2f2;border-color:#fca5a5;color:#dc2626}
 .r-cpu{background:#f8fafc;border:1px solid #e8ecf0;border-radius:8px;padding:12px}
 .r-cpu-type{margin-bottom:8px}
 .r-cpu .r-textarea{background:#fff;margin-bottom:8px}
@@ -401,7 +401,6 @@ function render(){
         <div class="h-row">
           <span class="h-title">${escHtml(h.optimizedTitle||h.title)}</span>
           <span class="h-rev">${h.cpuResult?'P:'+Number(h.cpuResult).toLocaleString()+'元 | ':''}+${h.impact.toFixed(1)}萬</span>
-          <button class="h-del" onclick="event.stopPropagation();delTicket('${h.id}','${escHtml(h.optimizedTitle||h.title)}')" title="刪除">&times;</button>
         </div>
         <div class="h-story"><span style="color:#3b82f6;font-style:normal;font-weight:600">${escHtml(h.author||'')}</span> ${escHtml(h.story)}</div>
       </div>`).join('')}
@@ -449,6 +448,7 @@ function renderResult(){
       '<button class="r-btn" style="background:#22c55e;color:#fff;border-color:#22c55e;font-weight:700" onclick="confirmResult()">確定收錄</button>'}
       <button class="r-btn" onclick="copyText()">複製</button>
       <button class="r-btn" onclick="copyJSON()">JSON</button>
+      ${r.id?'<button class="r-btn r-btn-del" onclick="delTicket(\''+r.id+'\',\''+escHtml(r.optimizedTitle||r.title).replace(/'/g,"\\'")+'\')">刪除</button>':''}
     </div>`;
 }
 function buildBenefitText(r){
